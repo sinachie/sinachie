@@ -17,3 +17,9 @@ Sinachie is a serverless, Progressive Web App (PWA) designed for enterprise-grad
 · AI/ML: face-api.js (TensorFlow.js)
 · Authentication & Database: Supabase (PostgreSQL)
 · Hosting: Cloudflare Pages
+
+## 📄 Copyright & License
+
+**Copyright (c) 2026 Sinachie. All Rights Reserved.**
+
+This software and its source code are the exclusive property of Sinachie. Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited without the express written permission of the author.
