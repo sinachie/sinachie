@@ -1,4 +1,4 @@
-const CACHE = 'sinachie-v1.1';
+const CACHE = 'sinachie-v2';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/index.html', '/app.js', '/manifest.json'])));
 });
