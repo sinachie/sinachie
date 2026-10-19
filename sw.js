@@ -1,4 +1,4 @@
-const CACHE = 'sinachie-v2.2';
+const CACHE = 'sinachie-v2.6';
 self.addEventListener('install', e => {
   self.skipWaiting(); // Force the new service worker to take over immediately
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/index.html', '/app.js', '/manifest.json'])));
