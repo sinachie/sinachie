@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sinachie Attendance</title>
+  <title>Sinachie Facial Attendance</title>
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 <body>
-  <h1>Sinachie Attendance</h1>
-  <video id="video" width="640" height="480" autoplay muted></video>
+  <h1>Sinachie Facial Attendance</h1>
+  <video id="video" width="640" height="480" autoplay muted playsinline style="background: #000;"></video>
   <div id="status">Loading models...</div>
   <!-- Add this ABOVE your existing video and buttons -->
 <div id="authSection" style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc;">
@@ -28,5 +28,8 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
+  <footer style="text-align: center; margin-top: 30px; padding: 15px; font-size: 14px; color: #666;">
+      &copy; 2026 Sinachie. All Rights Reserved.
+  </footer>
 </body>
 </html>

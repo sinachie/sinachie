@@ -152,14 +152,26 @@ document.getElementById('recognizeBtn').onclick = async () => {
 // Keep your existing calculateEAR and detectBlink functions here.
 
 // --- Init (No auto-load; auth listener handles it) ---
+// --- Init (No auto-load; auth listener handles it) ---
 async function init() {
-  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-  statusEl.textContent = 'Models loaded. Please login.';
+  try {
+    statusEl.textContent = 'Loading AI models... Please wait.';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    
+    statusEl.textContent = 'Starting camera...';
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    
+    statusEl.textContent = 'Models loaded. Please login.';
+  } catch (error) {
+    // If anything fails, show it in big red text on your phone
+    statusEl.innerHTML = `<strong style="color:red;">Error: ${error.message}</strong>`;
+    console.error(error);
+  }
 }
+
 init();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
