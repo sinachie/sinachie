@@ -1,7 +1,14 @@
+// ==========================================
+// SINACHIE FACIAL ATTENDANCE - CORE LOGIC
+// ==========================================
+
 const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+
+// SUPABASE CREDENTIALS
 const SUPABASE_URL = 'https://aoqnbjdlhrlvowgomyab.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_GxpcijTSf1zXIyzySE7sgg_lBvcL4E_';
 
+// DOM Elements
 const video = document.getElementById('video');
 const canvas = document.getElementById('overlay');
 const statusEl = document.getElementById('status');
@@ -10,30 +17,34 @@ const appContent = document.getElementById('appContent');
 const registerBtn = document.getElementById('registerBtn');
 const recognizeBtn = document.getElementById('recognizeBtn');
 const authStatus = document.getElementById('authStatus');
-const departmentSelect = document.getElementById('departmentSelect');
+const departmentInput = document.getElementById('departmentInput');
 const adminDashboard = document.getElementById('adminDashboard');
 const logsTableBody = document.getElementById('logsTableBody');
 
+// Supabase Initialization
 const { createClient } = supabase;
 const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Global State
 let labeledDescriptors = [];
 let currentUser = null;
 let faceMatcher = null;
 let isLiveLoopRunning = false;
 let isProcessing = false;
 
-const DEFAULT_COMPANY_ID = '11111111-1111-1111-1111-111111111111'; // From SQL script
+// Default Company ID (From your SQL setup script)
+const DEFAULT_COMPANY_ID = '11111111-1111-1111-1111-111111111111'; 
 
-// --- AUTHENTICATION & SETUP ---
+// ==========================================
+// AUTHENTICATION & SETUP
+// ==========================================
 _supabase.auth.onAuthStateChange((event, session) => {
   if (session) {
     currentUser = session.user;
     authSection.style.display = 'none';
     appContent.style.display = 'block';
-    adminDashboard.style.display = 'block'; // Show dashboard on login
+    adminDashboard.style.display = 'block'; 
     statusEl.textContent = `Connecting to camera...`;
-    loadDepartments();
     loadUsersFromSupabase();
   } else {
     currentUser = null;
@@ -48,13 +59,16 @@ _supabase.auth.onAuthStateChange((event, session) => {
 document.getElementById('loginBtn').onclick = async () => {
   const email = document.getElementById('authEmail').value;
   const password = document.getElementById('authPassword').value;
+  authStatus.textContent = 'Authenticating...';
   const { error } = await _supabase.auth.signInWithPassword({ email, password });
   if (error) authStatus.textContent = `Error: ${error.message}`;
+  else authStatus.textContent = '';
 };
 
 document.getElementById('signupBtn').onclick = async () => {
   const email = document.getElementById('authEmail').value;
   const password = document.getElementById('authPassword').value;
+  authStatus.textContent = 'Creating account...';
   const { error } = await _supabase.auth.signUp({ email, password });
   if (error) authStatus.textContent = `Error: ${error.message}`;
   else authStatus.textContent = 'Check your email to confirm, then login.';
@@ -64,23 +78,16 @@ document.getElementById('logoutBtn').onclick = async () => {
   await _supabase.auth.signOut();
 };
 
-// --- LOAD DATA ---
-async function loadDepartments() {
-  const { data, error } = await _supabase.from('departments').select('*');
-  if (!error && data) {
-    departmentSelect.innerHTML = '<option value="">Select Department...</option>';
-    data.forEach(dept => {
-      departmentSelect.innerHTML += `<option value="${dept.id}">${dept.name}</option>`;
-    });
-  }
-}
-
+// ==========================================
+// DATA LOADING & CAMERA INIT
+// ==========================================
 async function loadUsersFromSupabase() {
   const { data, error } = await _supabase.from('users').select('name, department_id, face_descriptor');
   if (error) {
-    statusEl.textContent = 'DB Error: ' + error.message;
+    statusEl.innerHTML = `<span style="color:red;">DB Error: ${error.message}</span>`;
     return;
   }
+  
   labeledDescriptors = data.map(user => ({
     name: user.name,
     department_id: user.department_id,
@@ -96,7 +103,6 @@ async function loadUsersFromSupabase() {
   }
 }
 
-// --- CAMERA & AI ---
 async function startCameraAndModels() {
   try {
     statusEl.textContent = 'Loading AI models...';
@@ -104,6 +110,7 @@ async function startCameraAndModels() {
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
     
+    statusEl.textContent = 'Starting camera...';
     const stream = await navigator.mediaDevices.getUserMedia({ 
       video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
     });
@@ -121,6 +128,9 @@ async function startCameraAndModels() {
   }
 }
 
+// ==========================================
+// REAL-TIME TRACKING LOOP
+// ==========================================
 async function detectFacesLoop() {
   if (!currentUser || video.paused || video.ended || video.readyState < 2) {
     setTimeout(() => requestAnimationFrame(detectFacesLoop), 500);
@@ -144,24 +154,27 @@ async function detectFacesLoop() {
     
     registerBtn.disabled = false;
     recognizeBtn.disabled = false;
-    if (!isProcessing) statusEl.textContent = 'Face detected. Ready.';
+    
+    if (!isProcessing) statusEl.innerHTML = `<span style="color:#4caf50;">Face detected. Ready.</span>`;
   } else {
     registerBtn.disabled = true;
     recognizeBtn.disabled = true;
-    if (!isProcessing) statusEl.textContent = 'Align your face in the camera.';
+    if (!isProcessing) statusEl.innerHTML = `Align your face in the camera.`;
   }
 
   setTimeout(() => requestAnimationFrame(detectFacesLoop), 100);
 }
 
-// --- REGISTER (With Department) ---
+// ==========================================
+// REGISTER NEW EMPLOYEE (Free-Text Department)
+// ==========================================
 registerBtn.onclick = async () => {
   const name = document.getElementById('nameInput').value.trim();
-  const deptId = departmentSelect.value;
+  const deptName = departmentInput.value.trim();
   const pin = document.getElementById('pinInput').value.trim();
 
-  if (!name) return alert('Please enter a name.');
-  if (!deptId) return alert('Please select a department.');
+  if (!name) return alert('Please enter a full name.');
+  if (!deptName) return alert('Please type a department name.');
   if (pin.length !== 4) return alert('Please enter a 4-digit PIN.');
 
   isProcessing = true;
@@ -173,44 +186,58 @@ registerBtn.onclick = async () => {
                                   .withFaceDescriptor();
 
   if (!detection) {
-    statusEl.textContent = 'Failed to capture. Align face and try again.';
+    statusEl.innerHTML = '<span style="color:red;">Failed to capture. Ensure good lighting and hold still.</span>';
     registerBtn.disabled = false;
     isProcessing = false;
     return;
   }
 
   statusEl.textContent = 'Saving to database...';
+  
+  // Generate a unique ID for the new department typed by the user
+  const newDeptId = crypto.randomUUID(); 
+
+  // Insert the department into the DB
+  await _supabase.from('departments').insert({
+    id: newDeptId,
+    company_id: DEFAULT_COMPANY_ID,
+    name: deptName
+  });
+
+  // Insert the new user with their face descriptor
   const { error } = await _supabase.from('users').insert({
     company_id: DEFAULT_COMPANY_ID,
-    department_id: deptId,
+    department_id: newDeptId,
     name: name,
     face_descriptor: Array.from(detection.descriptor)
-    // You can add the PIN to the DB schema if you want 2FA later
   });
 
   if (error) {
-    statusEl.textContent = `DB Error: ${error.message}`;
+    statusEl.innerHTML = `<span style="color:red;">DB Error: ${error.message}</span>`;
   } else {
-    statusEl.textContent = `✅ Successfully registered ${name}!`;
+    statusEl.innerHTML = `<span style="color:#4caf50;">✅ Successfully registered ${name}!</span>`;
     document.getElementById('nameInput').value = '';
     document.getElementById('pinInput').value = '';
-    departmentSelect.value = '';
+    departmentInput.value = '';
     await loadUsersFromSupabase(); 
   }
+  
   registerBtn.disabled = false;
   isProcessing = false;
 };
 
-// --- RECOGNIZE & CHECK IN (Saving Department) ---
+// ==========================================
+// RECOGNIZE & LIVENESS CHECK
+// ==========================================
 recognizeBtn.onclick = async () => {
-  if (labeledDescriptors.length === 0) return alert('No faces registered yet.');
+  if (labeledDescriptors.length === 0) return alert('No employees registered yet.');
   
   isProcessing = true;
   let blinkDetected = false;
   let closedFrames = 0;
   let openFrames = 0;
 
-  statusEl.textContent = '👁️ Please blink to verify liveness...';
+  statusEl.innerHTML = '👁️ Please blink your eyes slowly to verify liveness...';
 
   const checkInterval = setInterval(async () => {
     if (blinkDetected) return;
@@ -226,34 +253,37 @@ recognizeBtn.onclick = async () => {
                  Math.hypot(leftEye[2].x - leftEye[4].x, leftEye[2].y - leftEye[4].y)) / 
                  (2.0 * Math.hypot(leftEye[0].x - leftEye[3].x, leftEye[0].y - leftEye[3].y));
 
-    if (ear < 0.24) closedFrames++; else openFrames++;
+    if (ear < 0.24) closedFrames++; 
+    else openFrames++;
 
-    if (closedFrames >= 1 && openFrames >= 2) {
+    // If the user closed their eyes and then opened them
+    if (closedFrames >= 1 && openFrames >= 2 && !blinkDetected) {
       blinkDetected = true;
       clearInterval(checkInterval);
+      
+      statusEl.innerHTML = 'Liveness confirmed! Matching identity...';
       
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
       if (bestMatch.label === 'unknown') {
-        statusEl.textContent = '❌ Unknown face. Please register.';
+        statusEl.innerHTML = '<span style="color:red;">❌ Unknown face. Please register first.</span>';
         isProcessing = false;
       } else {
-        // Find the department name for the log
-        const matchedUser = labeledDescriptors.find(u => u.name === bestMatch.label);
-        const deptText = departmentSelect.options[departmentSelect.selectedIndex]?.text || 'General';
+        // Log attendance to the database
+        const typedDept = departmentInput.value.trim() || 'General';
 
         const { error } = await _supabase.from('attendance').insert({
           company_id: DEFAULT_COMPANY_ID,
           user_id: currentUser.id,
           user_name: bestMatch.label,
-          department_name: deptText,
+          department_name: typedDept,
           check_in_time: new Date().toISOString()
         });
 
         if (error) {
-          statusEl.textContent = `✅ ${bestMatch.label} matched, but DB error: ${error.message}`;
+          statusEl.innerHTML = `<span style="color:red;">✅ ${bestMatch.label} matched, but DB error: ${error.message}</span>`;
         } else {
-          statusEl.textContent = `✅ ${bestMatch.label} checked in!`;
+          statusEl.innerHTML = `<span style="color:#4caf50;">✅ ${bestMatch.label} checked in successfully!</span>`;
           fetchAttendanceLogs(); // Auto-refresh dashboard
         }
         isProcessing = false;
@@ -261,16 +291,19 @@ recognizeBtn.onclick = async () => {
     }
   }, 150);
 
+  // Timeout after 10 seconds if no blink is detected
   setTimeout(() => {
     if (!blinkDetected) {
       clearInterval(checkInterval);
-      statusEl.textContent = '❌ Liveness timeout. Try again.';
+      statusEl.innerHTML = '<span style="color:red;">❌ Liveness timeout. Click again and blink clearly.</span>';
       isProcessing = false;
     }
   }, 10000);
 };
 
-// --- ADMIN DASHBOARD LOGS ---
+// ==========================================
+// ADMIN DASHBOARD LOGS
+// ==========================================
 document.getElementById('refreshLogsBtn').onclick = fetchAttendanceLogs;
 
 async function fetchAttendanceLogs() {
@@ -280,7 +313,7 @@ async function fetchAttendanceLogs() {
     .from('attendance')
     .select('user_name, department_name, check_in_time')
     .order('check_in_time', { ascending: false })
-    .limit(50);
+    .limit(50); // Show last 50 check-ins
 
   if (error) {
     logsTableBody.innerHTML = `<tr><td colspan="3" style="color:red;">Error: ${error.message}</td></tr>`;
@@ -288,7 +321,7 @@ async function fetchAttendanceLogs() {
   }
 
   if (data.length === 0) {
-    logsTableBody.innerHTML = '<tr><td colspan="3">No check-ins recorded.</td></tr>';
+    logsTableBody.innerHTML = '<tr><td colspan="3">No check-ins recorded yet.</td></tr>';
     return;
   }
 
