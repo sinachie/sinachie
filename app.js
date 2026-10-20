@@ -18,6 +18,7 @@ let labeledDescriptors = [];
 let currentUser = null;
 let faceMatcher = null;
 let isLiveLoopRunning = false;
+let isProcessing = false; // Prevents button spam
 
 // --- AUTHENTICATION LOGIC ---
 _supabase.auth.onAuthStateChange((event, session) => {
@@ -25,7 +26,7 @@ _supabase.auth.onAuthStateChange((event, session) => {
     currentUser = session.user;
     authSection.style.display = 'none';
     appContent.style.display = 'block';
-    statusEl.textContent = `Logged in. Connecting to camera...`;
+    statusEl.innerHTML = `Logged in. Connecting to camera...`;
     loadUsersFromSupabase();
   } else {
     currentUser = null;
@@ -59,7 +60,7 @@ document.getElementById('logoutBtn').onclick = async () => {
 async function loadUsersFromSupabase() {
   const { data, error } = await _supabase.from('users').select('name, face_descriptor');
   if (error) {
-    statusEl.textContent = 'DB Error: ' + error.message;
+    statusEl.innerHTML = `<span style="color:red;">DB Error: ${error.message}</span>`;
     return;
   }
   labeledDescriptors = data.map(user => ({
@@ -76,32 +77,26 @@ async function loadUsersFromSupabase() {
 
 async function startCameraAndModels() {
   try {
-    statusEl.textContent = 'Loading AI models (please wait)...';
+    statusEl.innerHTML = 'Loading AI models...';
     await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
     
-    statusEl.textContent = 'Models loaded. Starting camera...';
-    // Request camera
+    statusEl.innerHTML = 'Starting camera...';
     const stream = await navigator.mediaDevices.getUserMedia({ 
       video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
     });
     
     video.srcObject = stream;
     
-    // Force video to play on mobile browsers
     video.onloadedmetadata = async () => {
-      try {
-        await video.play();
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        if (!isLiveLoopRunning) {
-          isLiveLoopRunning = true;
-          detectFacesLoop();
-        }
-      } catch (err) {
-        statusEl.innerHTML = `<span style="color:red;">Video play error: ${err.message}</span>`;
+      await video.play();
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      if (!isLiveLoopRunning) {
+        isLiveLoopRunning = true;
+        detectFacesLoop();
       }
     };
   } catch (error) {
@@ -133,11 +128,17 @@ async function detectFacesLoop() {
     
     registerBtn.disabled = false;
     recognizeBtn.disabled = false;
-    statusEl.textContent = 'Face detected. Ready.';
+    
+    // Only update text if we aren't currently in the middle of a check-in
+    if (!isProcessing) {
+      statusEl.innerHTML = `<span style="color:#4caf50;">Face detected. Ready.</span>`;
+    }
   } else {
     registerBtn.disabled = true;
     recognizeBtn.disabled = true;
-    statusEl.textContent = 'Align your face in the camera.';
+    if (!isProcessing) {
+      statusEl.innerHTML = `Align your face in the camera.`;
+    }
   }
 
   setTimeout(() => requestAnimationFrame(detectFacesLoop), 100);
@@ -148,43 +149,54 @@ registerBtn.onclick = async () => {
   const name = document.getElementById('nameInput').value.trim();
   if (!name) return alert('Please enter a name first.');
 
+  isProcessing = true;
   registerBtn.disabled = true;
-  statusEl.textContent = 'Capturing face...';
+  statusEl.innerHTML = 'Capturing face...';
 
   const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
                                   .withFaceLandmarks()
                                   .withFaceDescriptor();
 
   if (!detection) {
-    statusEl.textContent = 'Failed to capture. Please try again.';
+    statusEl.innerHTML = '<span style="color:red;">Failed to capture. Please align your face.</span>';
     registerBtn.disabled = false;
+    isProcessing = false;
     return;
   }
 
+  statusEl.innerHTML = 'Saving to database...';
   const { error } = await _supabase.from('users').insert({
     name: name,
     face_descriptor: Array.from(detection.descriptor)
   });
 
   if (error) {
-    statusEl.textContent = 'DB Error: ' + error.message;
+    statusEl.innerHTML = `<span style="color:red;">DB Error: ${error.message}</span>`;
   } else {
-    statusEl.textContent = `✅ Successfully registered ${name}`;
+    statusEl.innerHTML = `<span style="color:#4caf50;">✅ Successfully registered ${name}!</span>`;
     document.getElementById('nameInput').value = '';
-    await loadUsersFromSupabase();
+    await loadUsersFromSupabase(); // Reload matcher
   }
+  
   registerBtn.disabled = false;
-};
+  isProcessing = false;
+}
 
 // --- RECOGNIZE & LIVENESS CHECK ---
 recognizeBtn.onclick = async () => {
   if (labeledDescriptors.length === 0) return alert('No faces registered yet.');
   
-  statusEl.textContent = 'Please blink your eyes to verify liveness...';
+  isProcessing = true;
   let blinkDetected = false;
-  let earHistory = [];
+  let openFrames = 0;
+  let closedFrames = 0;
+  let timeoutReached = false;
+
+  statusEl.innerHTML = '👁️ Please blink your eyes slowly to verify liveness...';
 
   const checkInterval = setInterval(async () => {
+    if (blinkDetected || timeoutReached) return;
+
     const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
                                     .withFaceLandmarks()
                                     .withFaceDescriptor();
@@ -196,17 +208,24 @@ recognizeBtn.onclick = async () => {
                  Math.hypot(leftEye[2].x - leftEye[4].x, leftEye[2].y - leftEye[4].y)) / 
                  (2.0 * Math.hypot(leftEye[0].x - leftEye[3].x, leftEye[0].y - leftEye[3].y));
 
-    earHistory.push(ear);
+    // Much more forgiving blink detection logic
+    if (ear < 0.24) { 
+      closedFrames++;
+    } else {
+      openFrames++;
+    }
 
-    if (earHistory.length > 2 && earHistory[earHistory.length - 2] < 0.22 && ear > 0.25) {
+    // If we have seen the eyes closed and then open again
+    if (closedFrames >= 1 && openFrames >= 2 && !blinkDetected) {
       blinkDetected = true;
       clearInterval(checkInterval);
-      statusEl.textContent = 'Liveness confirmed! Matching identity...';
+      statusEl.innerHTML = '✅ Liveness confirmed! Matching identity...';
       
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
       if (bestMatch.label === 'unknown') {
-        statusEl.textContent = '❌ Unknown face. Please register.';
+        statusEl.innerHTML = '❌ Unknown face. Please register.';
+        isProcessing = false;
       } else {
         const { error } = await _supabase.from('attendance').insert({
           user_id: currentUser.id,
@@ -215,18 +234,21 @@ recognizeBtn.onclick = async () => {
         });
 
         if (error) {
-          statusEl.textContent = `✅ ${bestMatch.label} matched, but DB error: ${error.message}`;
+          statusEl.innerHTML = `<span style="color:red;">✅ ${bestMatch.label} matched, but DB error: ${error.message}</span>`;
         } else {
-          statusEl.textContent = `✅ ${bestMatch.label} checked in successfully!`;
+          statusEl.innerHTML = `<span style="color:#4caf50;">✅ ${bestMatch.label} checked in successfully!</span>`;
         }
+        isProcessing = false;
       }
     }
-  }, 200);
+  }, 150);
 
+  // Timeout after 10 seconds
   setTimeout(() => {
     if (!blinkDetected) {
       clearInterval(checkInterval);
-      statusEl.textContent = '❌ Liveness timeout. Please click again and blink clearly.';
+      statusEl.innerHTML = '<span style="color:red;">❌ Liveness timeout. Click again and blink clearly.</span>';
+      isProcessing = false;
     }
-  }, 8000);
+  }, 10000);
 };
