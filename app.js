@@ -144,21 +144,27 @@ async function detectFacesLoop() {
   setTimeout(() => requestAnimationFrame(detectFacesLoop), 100);
 }
 
-// --- REGISTER FACE ---
+// --- REGISTER FACE (Improved) ---
 registerBtn.onclick = async () => {
   const name = document.getElementById('nameInput').value.trim();
   if (!name) return alert('Please enter a name first.');
 
   isProcessing = true;
   registerBtn.disabled = true;
-  statusEl.innerHTML = 'Capturing face...';
+  statusEl.innerHTML = 'Hold still, capturing...';
 
-  const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                                  .withFaceLandmarks()
-                                  .withFaceDescriptor();
+  let detection = null;
+  // Try up to 5 times to get a clean capture
+  for (let i = 0; i < 5; i++) {
+    detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                                .withFaceLandmarks()
+                                .withFaceDescriptor();
+    if (detection) break;
+    await new Promise(r => setTimeout(r, 200)); // wait 200ms before retrying
+  }
 
   if (!detection) {
-    statusEl.innerHTML = '<span style="color:red;">Failed to capture. Please align your face.</span>';
+    statusEl.innerHTML = '<span style="color:red;">Failed to capture. Please ensure good lighting and hold still.</span>';
     registerBtn.disabled = false;
     isProcessing = false;
     return;
