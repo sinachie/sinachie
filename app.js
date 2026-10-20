@@ -1,4 +1,4 @@
-const MODEL_URL = './models';
+const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
 const SUPABASE_URL = 'https://aoqnbjdlhrlvowgomyab.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_GxpcijTSf1zXIyzySE7sgg_lBvcL4E_';
 
