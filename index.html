@@ -38,22 +38,53 @@
   </div>
 
   <div id="appContent">
-    <button id="logoutBtn" style="float: right; margin-bottom: 10px;">Logout</button>
-    <div id="video-container">
-      <video id="video" autoplay muted playsinline></video>
-      <canvas id="overlay"></canvas>
-    </div>
-    
-    <div id="status">Initializing camera...</div>
-    
-    <div>
-      <input id="nameInput" placeholder="Enter name for registration" style="width: 60%;" />
-      <button id="registerBtn" disabled>Register Face</button>
-    </div>
-    <div style="margin-top: 10px;">
-      <button id="recognizeBtn" disabled style="width: 80%; padding: 15px; font-size: 18px;">Recognize & Check In</button>
-    </div>
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="color:#fff; margin:0;">Sinachie POS</h3>
+    <button id="logoutBtn" style="background: #d32f2f; margin:0;">Logout</button>
   </div>
+  
+  <div id="video-container" style="margin-top: 15px;">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="overlay"></canvas>
+  </div>
+  
+  <div id="status" style="margin: 15px 0; font-size: 16px; font-weight: bold; color: #4caf50;">Initializing camera...</div>
+  
+  <!-- Registration Form -->
+  <div id="registrationForm" style="background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+    <h4 style="margin-top: 0; color: #fff;">Register New Employee</h4>
+    <input id="nameInput" placeholder="Full Name" style="margin-bottom: 10px; width: 95%;" />
+    <input id="pinInput" placeholder="Create 4-Digit PIN" maxlength="4" style="margin-bottom: 10px; width: 95%;" />
+    
+    <select id="departmentSelect" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; background: #2a2a2a; color: white; border: 1px solid #333;">
+      <option value="">Select Department...</option>
+    </select>
+
+    <button id="registerBtn" disabled style="width: 100%;">Register Face & PIN</button>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <button id="recognizeBtn" disabled style="width: 100%; padding: 15px; font-size: 18px;">Recognize & Check In</button>
+  </div>
+</div>
+
+<!-- Admin Dashboard -->
+<div id="adminDashboard" style="display: none; margin-top: 40px; background: #1e1e1e; padding: 20px; border-radius: 10px;">
+  <h2 style="color: #fff; margin-top: 0;">Live Attendance Log</h2>
+  <button id="refreshLogsBtn" style="margin-bottom: 15px; background: #4caf50;">Refresh Logs</button>
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; color: #fff; text-align: left; font-size: 14px;">
+      <thead>
+        <tr style="border-bottom: 2px solid #555;">
+          <th style="padding: 8px;">Name</th>
+          <th style="padding: 8px;">Dept</th>
+          <th style="padding: 8px;">Time</th>
+        </tr>
+      </thead>
+      <tbody id="logsTableBody"></tbody>
+    </table>
+  </div>
+</div>
 
   <footer>&copy; 2026 Sinachie. All Rights Reserved.</footer>
   <script src="app.js"></script>
