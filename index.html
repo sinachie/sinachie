@@ -26,36 +26,30 @@
 <body>
   <h1>Sinachie Enterprise POS</h1>
 
-  <!-- AUTH SECTION -->
+  <!-- AUTH SECTION (Only shows if not logged in) -->
   <div id="authSection">
     <h3>Secure Login</h3>
-    
     <div class="input-group">
       <input id="authEmail" type="email" placeholder="Work Email" />
     </div>
-    
     <div class="input-group">
       <input id="authPassword" type="password" placeholder="Password" />
       <span class="toggle-password" onclick="togglePassword('authPassword', this)">👁️</span>
     </div>
-
-    <!-- Company Code (Only needed for Sign Up) -->
     <div class="input-group" id="companyCodeGroup" style="display: none;">
       <input id="companyCodeInput" type="text" placeholder="Company Join Code (e.g. SINACHIE-HQ)" />
     </div>
-
     <div>
       <button id="loginBtn">Login</button>
       <button id="signupBtn">Sign Up</button>
     </div>
     <p id="authStatus" style="color: #ff9800; font-size: 14px;"></p>
-    
     <p style="font-size: 12px; color: #888; margin-top: 15px; cursor: pointer;" onclick="toggleAuthMode()">
       <u>Need to create a new company? Click here.</u>
     </p>
   </div>
 
-  <!-- APP CONTENT -->
+  <!-- APP CONTENT (Employee Terminal) -->
   <div id="appContent">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <h3 style="margin:0;">Terminal Active</h3>
@@ -68,72 +62,77 @@
     </div>
     
     <div id="status" style="margin: 15px 0; font-size: 16px; font-weight: bold; color: #4caf50;">Initializing...</div>
-    
-    <!-- ADMIN ONLY REGISTRATION -->
-    <div id="adminRegistration" style="display: none; background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-      <h4 style="margin-top: 0;">Admin: Register New Employee</h4>
-      <input id="nameInput" placeholder="Full Name" style="margin-bottom: 5px;" />
-      <input id="emailInput" placeholder="Employee Email" type="email" style="margin-bottom: 5px;" />
-      <input id="pinInput" placeholder="Create 4-Digit PIN" maxlength="4" style="margin-bottom: 5px;" />
-      <input id="departmentInput" placeholder="Department (e.g. Sales)" style="margin-bottom: 5px;" />
-      <button id="registerBtn" disabled style="width: 100%;">Capture & Register Face</button>
-    </div>
-
-    <!-- PIN FALLBACK -->
-    <div id="pinFallback" style="display: none; background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-      <h4 style="margin-top: 0;">Camera Failed? Use PIN</h4>
-      <input id="fallbackPin" placeholder="Enter 4-Digit PIN" type="password" maxlength="4" />
-      <button id="pinCheckInBtn" style="width: 100%; background: #ff9800;">Check In with PIN</button>
-    </div>
 
     <!-- CHECK IN BUTTON -->
     <div style="margin-top: 10px;">
       <button id="recognizeBtn" disabled style="width: 100%; padding: 15px; font-size: 18px;">Recognize & Check In</button>
     </div>
+
+    <!-- PIN FALLBACK -->
+    <div id="pinFallback" style="display: none; background: #1e1e1e; padding: 15px; border-radius: 8px; margin-top: 15px;">
+      <h4 style="margin-top: 0;">Camera Failed? Use PIN</h4>
+      <input id="fallbackPin" placeholder="Enter 4-Digit PIN" type="password" maxlength="4" />
+      <button id="pinCheckInBtn" style="width: 100%; background: #ff9800;">Check In with PIN</button>
+    </div>
+
+    <!-- ADMIN CONTROLS (Hidden by default) -->
+    <button id="toggleAdminBtn" style="background: #555; margin-top: 20px; width: 100%;">⚙️ Open Admin Setup</button>
+    
+    <div id="adminPanel" style="display: none; margin-top: 20px;">
+      <div id="adminRegistration" style="background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+  <h4 style="margin-top: 0;">Register New Employee</h4>
+  <input id="nameInput" placeholder="Full Name" style="margin-bottom: 5px;" />
+  <input id="pinInput" placeholder="Create 4-Digit PIN" maxlength="4" style="margin-bottom: 5px;" />
+  <input id="departmentInput" placeholder="Department (e.g. Sales)" style="margin-bottom: 5px;" />
+  
+  <!-- NEW SHIFT INPUTS -->
+  <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+    <div style="flex: 1;">
+      <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 3px;">Shift Start</label>
+      <input id="shiftStartInput" type="time" value="08:00" style="margin-bottom: 0; width: 100%;" />
+    </div>
+    <div style="flex: 1;">
+      <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 3px;">Shift End</label>
+      <input id="shiftEndInput" type="time" value="17:00" style="margin-bottom: 0; width: 100%;" />
+    </div>
   </div>
 
-  <!-- ADMIN DASHBOARD -->
-  <div id="adminDashboard" style="display: none; margin-top: 40px; background: #1e1e1e; padding: 20px; border-radius: 10px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h2 style="color: #fff; margin:0;">Live Attendance</h2>
-      <button id="exportCsvBtn" style="background: #007bff; margin:0;">Export CSV</button>
-    </div>
-    <button id="refreshLogsBtn" style="margin-bottom: 15px; background: #4caf50; width: 100%;">Refresh Logs</button>
-    
-    <div style="overflow-x: auto;">
-      <table style="width: 100%; border-collapse: collapse; color: #fff; text-align: left; font-size: 14px;">
-        <thead>
-          <tr style="border-bottom: 2px solid #555;">
-            <th style="padding: 8px;">Name</th>
-            <th style="padding: 8px;">Dept</th>
-            <th style="padding: 8px;">Time</th>
-            <th style="padding: 8px;">Status</th>
-          </tr>
-        </thead>
-        <tbody id="logsTableBody"></tbody>
-      </table>
+  <button id="registerBtn" disabled style="width: 100%;">Capture & Register Face</button>
+</div>
+
+      <div id="adminDashboard" style="background: #1e1e1e; padding: 20px; border-radius: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h2 style="color: #fff; margin:0;">Live Attendance</h2>
+          <button id="exportCsvBtn" style="background: #007bff; margin:0;">Export CSV</button>
+        </div>
+        <button id="refreshLogsBtn" style="margin-bottom: 15px; background: #4caf50; width: 100%;">Refresh Logs</button>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; color: #fff; text-align: left; font-size: 14px;">
+            <thead>
+              <tr style="border-bottom: 2px solid #555;">
+                <th style="padding: 8px;">Name</th>
+                <th style="padding: 8px;">Dept</th>
+                <th style="padding: 8px;">Time</th>
+                <th style="padding: 8px;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
   <footer>&copy; 2026 Sinachie. All Rights Reserved.</footer>
   
-  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script>
-    // Toggle Password Visibility
     function togglePassword(inputId, icon) {
       const input = document.getElementById(inputId);
-      if (input.type === "password") {
-        input.type = "text";
-        icon.innerHTML = "🙈";
-      } else {
-        input.type = "password";
-        icon.innerHTML = "👁️";
-      }
+      if (input.type === "password") { input.type = "text"; icon.innerHTML = "🙈"; }
+      else { input.type = "password"; icon.innerHTML = "👁️"; }
     }
-
-    // Toggle between Login and Signup mode
     let isSignupMode = false;
     function toggleAuthMode() {
       isSignupMode = !isSignupMode;
