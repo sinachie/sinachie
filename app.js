@@ -1,5 +1,5 @@
 // ==========================================
-// SINACHIE FACIAL ATTENDANCE - CORE LOGIC
+// SINACHIE FACIAL ATTENDANCE - CORE LOGIC (OPTIMIZED)
 // ==========================================
 
 const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
@@ -129,7 +129,7 @@ async function startCameraAndModels() {
 }
 
 // ==========================================
-// REAL-TIME TRACKING LOOP
+// REAL-TIME TRACKING LOOP (Optimized for low CPU)
 // ==========================================
 async function detectFacesLoop() {
   if (!currentUser || video.paused || video.ended || video.readyState < 2) {
@@ -166,7 +166,7 @@ async function detectFacesLoop() {
 }
 
 // ==========================================
-// REGISTER NEW EMPLOYEE (Free-Text Department)
+// REGISTER NEW EMPLOYEE
 // ==========================================
 registerBtn.onclick = async () => {
   const name = document.getElementById('nameInput').value.trim();
@@ -193,28 +193,22 @@ registerBtn.onclick = async () => {
   }
 
   statusEl.textContent = 'Saving to database...';
-  
   const newDeptId = crypto.randomUUID(); 
 
-  // 1. Insert the department FIRST and check for errors
+  // Insert department first
   const { error: deptError } = await _supabase
     .from('departments')
-    .insert({
-      id: newDeptId,
-      company_id: DEFAULT_COMPANY_ID,
-      name: deptName
-    })
-    .select(); // <-- Forces Supabase to return an error if this fails
+    .insert({ id: newDeptId, company_id: DEFAULT_COMPANY_ID, name: deptName })
+    .select(); 
 
   if (deptError) {
-    // If the department insert failed, stop here so we don't crash on the user insert
     statusEl.innerHTML = `<span style="color:red;">Department Error: ${deptError.message}</span>`;
     registerBtn.disabled = false;
     isProcessing = false;
     return;
   }
 
-  // 2. Now it's safe to insert the user because the department exists
+  // Insert user
   const { error: userError } = await _supabase.from('users').insert({
     company_id: DEFAULT_COMPANY_ID,
     department_id: newDeptId,
@@ -236,9 +230,8 @@ registerBtn.onclick = async () => {
   isProcessing = false;
 };
 
-
 // ==========================================
-// RECOGNIZE & LIVENESS CHECK
+// WORLD-CLASS LIVENESS & CHECK IN
 // ==========================================
 recognizeBtn.onclick = async () => {
   if (labeledDescriptors.length === 0) return alert('No employees registered yet.');
@@ -250,6 +243,7 @@ recognizeBtn.onclick = async () => {
 
   statusEl.innerHTML = '👁️ Please blink your eyes slowly to verify liveness...';
 
+  // Throttle interval to 300ms to prevent lag on mobile devices
   const checkInterval = setInterval(async () => {
     if (blinkDetected) return;
 
@@ -260,15 +254,21 @@ recognizeBtn.onclick = async () => {
     if (!detection) return;
 
     const leftEye = detection.landmarks.getLeftEye();
+    
+    // Calculate Eye Aspect Ratio (EAR)
     const ear = (Math.hypot(leftEye[1].x - leftEye[5].x, leftEye[1].y - leftEye[5].y) + 
                  Math.hypot(leftEye[2].x - leftEye[4].x, leftEye[2].y - leftEye[4].y)) / 
                  (2.0 * Math.hypot(leftEye[0].x - leftEye[3].x, leftEye[0].y - leftEye[3].y));
 
-    if (ear < 0.24) closedFrames++; 
-    else openFrames++;
+    // Wider threshold (0.26) to catch natural blinks without forcing the user to squeeze their eyes
+    if (ear < 0.26) {
+      closedFrames++; 
+    } else {
+      openFrames++;
+    }
 
-    // If the user closed their eyes and then opened them
-    if (closedFrames >= 1 && openFrames >= 2 && !blinkDetected) {
+    // If the user closed their eyes and then opened them naturally
+    if (closedFrames >= 1 && openFrames >= 1 && !blinkDetected) {
       blinkDetected = true;
       clearInterval(checkInterval);
       
@@ -280,7 +280,6 @@ recognizeBtn.onclick = async () => {
         statusEl.innerHTML = '<span style="color:red;">❌ Unknown face. Please register first.</span>';
         isProcessing = false;
       } else {
-        // Log attendance to the database
         const typedDept = departmentInput.value.trim() || 'General';
 
         const { error } = await _supabase.from('attendance').insert({
@@ -300,16 +299,16 @@ recognizeBtn.onclick = async () => {
         isProcessing = false;
       }
     }
-  }, 150);
+  }, 300); // 300ms is the sweet spot for zero lag and fast blink detection
 
-  // Timeout after 10 seconds if no blink is detected
+  // Extended timeout to 15 seconds to give users plenty of time
   setTimeout(() => {
     if (!blinkDetected) {
       clearInterval(checkInterval);
       statusEl.innerHTML = '<span style="color:red;">❌ Liveness timeout. Click again and blink clearly.</span>';
       isProcessing = false;
     }
-  }, 10000);
+  }, 15000);
 };
 
 // ==========================================
@@ -324,7 +323,7 @@ async function fetchAttendanceLogs() {
     .from('attendance')
     .select('user_name, department_name, check_in_time')
     .order('check_in_time', { ascending: false })
-    .limit(50); // Show last 50 check-ins
+    .limit(50); 
 
   if (error) {
     logsTableBody.innerHTML = `<tr><td colspan="3" style="color:red;">Error: ${error.message}</td></tr>`;
