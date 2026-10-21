@@ -194,26 +194,36 @@ registerBtn.onclick = async () => {
 
   statusEl.textContent = 'Saving to database...';
   
-  // Generate a unique ID for the new department typed by the user
   const newDeptId = crypto.randomUUID(); 
 
-  // Insert the department into the DB
-  await _supabase.from('departments').insert({
-    id: newDeptId,
-    company_id: DEFAULT_COMPANY_ID,
-    name: deptName
-  });
+  // 1. Insert the department FIRST and check for errors
+  const { error: deptError } = await _supabase
+    .from('departments')
+    .insert({
+      id: newDeptId,
+      company_id: DEFAULT_COMPANY_ID,
+      name: deptName
+    })
+    .select(); // <-- Forces Supabase to return an error if this fails
 
-  // Insert the new user with their face descriptor
-  const { error } = await _supabase.from('users').insert({
+  if (deptError) {
+    // If the department insert failed, stop here so we don't crash on the user insert
+    statusEl.innerHTML = `<span style="color:red;">Department Error: ${deptError.message}</span>`;
+    registerBtn.disabled = false;
+    isProcessing = false;
+    return;
+  }
+
+  // 2. Now it's safe to insert the user because the department exists
+  const { error: userError } = await _supabase.from('users').insert({
     company_id: DEFAULT_COMPANY_ID,
     department_id: newDeptId,
     name: name,
     face_descriptor: Array.from(detection.descriptor)
   });
 
-  if (error) {
-    statusEl.innerHTML = `<span style="color:red;">DB Error: ${error.message}</span>`;
+  if (userError) {
+    statusEl.innerHTML = `<span style="color:red;">User Error: ${userError.message}</span>`;
   } else {
     statusEl.innerHTML = `<span style="color:#4caf50;">✅ Successfully registered ${name}!</span>`;
     document.getElementById('nameInput').value = '';
@@ -225,6 +235,7 @@ registerBtn.onclick = async () => {
   registerBtn.disabled = false;
   isProcessing = false;
 };
+
 
 // ==========================================
 // RECOGNIZE & LIVENESS CHECK
