@@ -29,13 +29,30 @@
   <!-- AUTH SECTION -->
   <div id="authSection">
     <h3>Secure Login</h3>
-    <input id="authEmail" type="email" placeholder="Work Email" />
-    <input id="authPassword" type="password" placeholder="Password" />
+    
+    <div class="input-group">
+      <input id="authEmail" type="email" placeholder="Work Email" />
+    </div>
+    
+    <div class="input-group">
+      <input id="authPassword" type="password" placeholder="Password" />
+      <span class="toggle-password" onclick="togglePassword('authPassword', this)">👁️</span>
+    </div>
+
+    <!-- Company Code (Only needed for Sign Up) -->
+    <div class="input-group" id="companyCodeGroup" style="display: none;">
+      <input id="companyCodeInput" type="text" placeholder="Company Join Code (e.g. SINACHIE-HQ)" />
+    </div>
+
     <div>
       <button id="loginBtn">Login</button>
       <button id="signupBtn">Sign Up</button>
     </div>
     <p id="authStatus" style="color: #ff9800; font-size: 14px;"></p>
+    
+    <p style="font-size: 12px; color: #888; margin-top: 15px; cursor: pointer;" onclick="toggleAuthMode()">
+      <u>Need to create a new company? Click here.</u>
+    </p>
   </div>
 
   <!-- APP CONTENT -->
@@ -79,7 +96,7 @@
   <div id="adminDashboard" style="display: none; margin-top: 40px; background: #1e1e1e; padding: 20px; border-radius: 10px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
       <h2 style="color: #fff; margin:0;">Live Attendance</h2>
-      <button id="exportCsvBtn" style="background: #007bff; margin:0;">Export to CSV</button>
+      <button id="exportCsvBtn" style="background: #007bff; margin:0;">Export CSV</button>
     </div>
     <button id="refreshLogsBtn" style="margin-bottom: 15px; background: #4caf50; width: 100%;">Refresh Logs</button>
     
@@ -99,6 +116,33 @@
   </div>
 
   <footer>&copy; 2026 Sinachie. All Rights Reserved.</footer>
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script>
+    // Toggle Password Visibility
+    function togglePassword(inputId, icon) {
+      const input = document.getElementById(inputId);
+      if (input.type === "password") {
+        input.type = "text";
+        icon.innerHTML = "🙈";
+      } else {
+        input.type = "password";
+        icon.innerHTML = "👁️";
+      }
+    }
+
+    // Toggle between Login and Signup mode
+    let isSignupMode = false;
+    function toggleAuthMode() {
+      isSignupMode = !isSignupMode;
+      document.getElementById('companyCodeGroup').style.display = isSignupMode ? 'block' : 'none';
+      document.getElementById('loginBtn').style.display = isSignupMode ? 'none' : 'inline-block';
+      document.getElementById('signupBtn').style.display = isSignupMode ? 'inline-block' : 'none';
+      document.getElementById('authStatus').textContent = '';
+    }
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
