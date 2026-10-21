@@ -60,7 +60,8 @@ _supabase.auth.onAuthStateChange(async (event, session) => {
       if (data && data.length > 0) {
         currentUserRole = data[0].role;
       } else {
-        currentUserRole = 'admin'; // Fallback for first-time setup
+        // If the logged-in email is not in the users table, treat them as Admin
+        currentUserRole = 'admin'; 
       }
     } catch (err) {
       console.error("Role check failed:", err);
