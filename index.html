@@ -3,160 +3,459 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Sinachie Facial Attendance</title>
+  <title>Sinachie Enterprise POS</title>
   <link rel="manifest" href="manifest.json" />
+  
+  <!-- External Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #121212; color: white; margin: 0; padding: 20px; text-align: center; }
-    h1 { font-size: 24px; margin-bottom: 20px; }
-    #authSection { background: #1e1e1e; padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto; }
-    input { width: 90%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #333; background: #2a2a2a; color: white; }
-    button { padding: 10px 15px; margin: 5px; border: none; border-radius: 5px; background: #1a73e8; color: white; font-weight: bold; cursor: pointer; }
-    button:disabled { background: #555; cursor: not-allowed; }
-    #logoutBtn { background: #d32f2f; }
-    #appContent { display: none; max-width: 640px; margin: 0 auto; }
-    #video-container { position: relative; width: 100%; max-width: 640px; margin: 0 auto; border-radius: 10px; overflow: hidden; background: #000; }
+    /* PREMIUM ENTERPRISE DESIGN SYSTEM */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg-color: #0f1115;
+      --surface-color: #1a1d24;
+      --surface-hover: #232730;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+
+    h3, h4 {
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 16px;
+      letter-spacing: -0.3px;
+    }
+
+    /* Cards */
+    .card {
+      background-color: var(--surface-color);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 20px;
+    }
+
+    /* Auth Section */
+    #authSection {
+      margin-top: 5vh;
+    }
+
+    /* Inputs */
+    .input-group {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="time"] {
+      width: 100%;
+      padding: 14px 16px;
+      background-color: #0f1115;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      transition: all 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    /* Buttons */
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 10px;
+    }
+
+    button:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { background-color: var(--border-color); color: var(--text-muted); cursor: not-allowed; transform: none; }
+
+    #logoutBtn {
+      width: auto;
+      padding: 8px 16px;
+      background-color: transparent;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      margin-bottom: 0;
+    }
+    #logoutBtn:hover { background-color: rgba(239, 68, 68, 0.1); }
+    
+    #pinCheckInBtn { background-color: var(--warning); }
+    #pinCheckInBtn:hover { background-color: #d97706; }
+    
+    #exportCsvBtn, #refreshLogsBtn {
+      width: auto;
+      padding: 8px 16px;
+      font-size: 13px;
+      margin-bottom: 0;
+    }
+
+    /* Terminal Header */
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 440px;
+      margin-bottom: 16px;
+    }
+
+    .terminal-header h3 { margin-bottom: 0; }
+
+    .company-info {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .badge {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* Video Container */
+    #video-container {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background-color: #000;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+      border: 2px solid var(--surface-color);
+    }
+
     video { width: 100%; display: block; }
-    canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-    #status { margin: 15px 0; font-size: 16px; font-weight: bold; color: #4caf50; }
-    footer { margin-top: 30px; font-size: 12px; color: #888; }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #status {
+      margin: 16px 0;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-main);
+      text-align: center;
+      min-height: 24px;
+    }
+
+    /* Admin Section */
+    #toggleAdminBtn {
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      margin-top: 10px;
+      max-width: 440px;
+    }
+    #toggleAdminBtn:hover { background-color: var(--surface-color); color: var(--text-main); }
+
+    /* Form Grid for Shifts */
+    .shift-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .shift-grid label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    /* Dashboard Table */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .dashboard-header h2 { font-size: 18px; font-weight: 600; }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      margin-top: 16px;
+    }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+
+    th {
+      background-color: var(--surface-hover);
+      color: var(--text-muted);
+      font-weight: 500;
+      padding: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td { padding: 12px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+    tr:last-child td { border-bottom: none; }
+
+    /* Utilities */
+    .text-center { text-align: center; }
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 16px; }
+    .text-sm { font-size: 13px; color: var(--text-muted); }
+    .link { color: var(--primary); text-decoration: none; cursor: pointer; font-weight: 500; }
+    .link:hover { text-decoration: underline; }
+
+    footer {
+      margin-top: auto;
+      padding: 24px 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    
+    #appContent { display: none; width: 100%; flex-direction: column; align-items: center; }
   </style>
 </head>
 <body>
+
   <h1>Sinachie Enterprise POS</h1>
 
-  <!-- AUTH SECTION (Only shows if not logged in) -->
-  <div id="authSection">
-  <h3>Secure Login / Register</h3>
-  
-  <div class="input-group">
-    <input id="authEmail" type="email" placeholder="Work Email (e.g. name@gmail.com)" />
-  </div>
-  
-  <div class="input-group">
-    <input id="authPassword" type="password" placeholder="Password" />
-    <span class="toggle-password" onclick="togglePassword('authPassword', this)">👁️</span>
+  <!-- AUTH SECTION -->
+  <div id="authSection" class="card">
+    <h3 class="text-center" style="margin-bottom: 24px;">Secure Login / Register</h3>
+    
+    <div class="input-group">
+      <input id="authEmail" type="email" placeholder="Work Email (e.g. name@gmail.com)" />
+    </div>
+    
+    <div class="input-group">
+      <input id="authPassword" type="password" placeholder="Password" />
+      <span class="toggle-password" onclick="togglePassword('authPassword', this)">👁️</span>
+    </div>
+
+    <!-- Company Name Input (Only shows during signup) -->
+    <div class="input-group" id="companyNameGroup" style="display: block;">
+      <input id="companyNameInput" type="text" placeholder="Company Name (e.g. Sinachie Academy)" />
+    </div>
+
+    <div class="input-group">
+      <input id="companyCodeInput" type="text" placeholder="Optional: Join Code (Leave blank if new)" />
+    </div>
+
+    <div style="margin-top: 24px;">
+      <button id="loginBtn" style="display: none;">Login to Existing Account</button>
+      <button id="signupBtn">Create Account</button>
+    </div>
+    
+    <p id="authStatus" style="color: var(--warning); font-size: 14px; font-weight: 500; margin-top: 16px; text-align: center;"></p>
+    
+    <p class="text-center mt-4 text-sm">
+      <span id="toggleText" class="link" onclick="toggleAuthMode()">Already have an account? Click here to Login.</span>
+    </p>
   </div>
 
-  <!-- NEW: Company Name Input (Only shows during signup) -->
-  <div class="input-group" id="companyNameGroup" style="display: block;">
-    <input id="companyNameInput" type="text" placeholder="Company Name (e.g. Esther Concept)" />
-  </div>
-
-  <div class="input-group">
-    <input id="companyCodeInput" type="text" placeholder="Optional: Join Code (Leave blank if new)" />
-  </div>
-
-  <div>
-    <button id="loginBtn" style="display: none;">Login to Existing Account</button>
-    <button id="signupBtn">Create Account</button>
-  </div>
-  <p id="authStatus" style="color: #ff9800; font-size: 14px; font-weight: bold; margin-top: 10px;"></p>
-  
-  <p style="font-size: 12px; color: #888; margin-top: 15px; cursor: pointer;" onclick="toggleAuthMode()">
-    <u id="toggleText">Already have an account? Click here to Login.</u>
-  </p>
-</div>
-
-  <!-- APP CONTENT (Employee Terminal) -->
+  <!-- APP CONTENT -->
   <div id="appContent">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-  <div>
-    <h3 style="margin:0;">Terminal Active</h3>
-    <div id="companyInfo" style="font-size: 12px; color: #888; margin-top: 4px;">
-      Company: <span id="displayCompanyName">Loading...</span> | Code: <strong id="displayJoinCode" style="color:#4caf50;">...</strong>
-    </div>
-  </div>
-  <button id="logoutBtn" style="background: #d32f2f; margin:0;">Logout</button>
-</div>
     
-    <div id="video-container" style="max-height: 300px; overflow: hidden;">
-  <video id="video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-  <canvas id="overlay"></canvas>
-</div>
-    
-    <div id="status" style="margin: 15px 0; font-size: 16px; font-weight: bold; color: #4caf50;">Initializing...</div>
-
-    <!-- CHECK IN BUTTON -->
-    <div style="margin-top: 10px;">
-      <button id="recognizeBtn" disabled style="width: 100%; padding: 15px; font-size: 18px;">Recognize & Check In</button>
-    </div>
-
-    <!-- PIN FALLBACK -->
-    <div id="pinFallback" style="display: none; background: #1e1e1e; padding: 15px; border-radius: 8px; margin-top: 15px;">
-      <h4 style="margin-top: 0;">Camera Failed? Use PIN</h4>
-      <input id="fallbackPin" placeholder="Enter 4-Digit PIN" type="password" maxlength="4" />
-      <button id="pinCheckInBtn" style="width: 100%; background: #ff9800;">Check In with PIN</button>
-    </div>
-
-    <!-- ADMIN CONTROLS (Hidden by default) -->
-    <button id="toggleAdminBtn" style="background: #555; margin-top: 20px; width: 100%;">⚙️ Open Admin Setup</button>
-    
-    <div id="adminPanel" style="display: none; margin-top: 20px;">
-      <div id="adminRegistration" style="background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-  <h4 style="margin-top: 0;">Register New Employee</h4>
-  <input id="nameInput" placeholder="Full Name" style="margin-bottom: 5px;" />
-  <input id="pinInput" placeholder="Create 4-Digit PIN" maxlength="4" style="margin-bottom: 5px;" />
-  <input id="departmentInput" placeholder="Department (e.g. Sales)" style="margin-bottom: 5px;" />
-  
-  <!-- NEW SHIFT INPUTS -->
-  <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-    <div style="flex: 1;">
-      <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 3px;">Shift Start</label>
-      <input id="shiftStartInput" type="time" value="08:00" style="margin-bottom: 0; width: 100%;" />
-    </div>
-    <div style="flex: 1;">
-      <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 3px;">Shift End</label>
-      <input id="shiftEndInput" type="time" value="17:00" style="margin-bottom: 0; width: 100%;" />
-    </div>
-  </div>
-
-  <button id="registerBtn" disabled style="width: 100%;">Capture & Register Face</button>
-</div>
-
-      <div id="adminDashboard" style="background: #1e1e1e; padding: 20px; border-radius: 10px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h2 style="color: #fff; margin:0;">Live Attendance</h2>
-          <button id="exportCsvBtn" style="background: #007bff; margin:0;">Export CSV</button>
+    <!-- Terminal Header -->
+    <div class="terminal-header">
+      <div>
+        <h3>Terminal Active</h3>
+        <div id="companyInfo" class="company-info">
+          Company: <span id="displayCompanyName">Loading...</span> 
+          | Code: <span id="displayJoinCode" class="badge">...</span>
         </div>
-        <button id="refreshLogsBtn" style="margin-bottom: 15px; background: #4caf50; width: 100%;">Refresh Logs</button>
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; color: #fff; text-align: left; font-size: 14px;">
+      </div>
+      <button id="logoutBtn">Logout</button>
+    </div>
+    
+    <!-- Camera Feed -->
+    <div id="video-container">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    
+    <div id="status">Initializing camera...</div>
+    
+    <!-- Main Check-In Button -->
+    <div style="width: 100%; max-width: 440px; margin-top: 10px;">
+      <button id="recognizeBtn" disabled style="padding: 18px; font-size: 18px; border-radius: var(--radius-lg);">Recognize & Check In</button>
+    </div>
+
+    <!-- PIN Fallback -->
+    <div id="pinFallback" class="card" style="display: none; margin-top: 20px;">
+      <h4 class="text-center">Camera Failed? Use PIN</h4>
+      <div class="input-group">
+        <input id="fallbackPin" placeholder="Enter 4-Digit PIN" type="password" maxlength="4" />
+      </div>
+      <button id="pinCheckInBtn">Check In with PIN</button>
+    </div>
+
+    <!-- Admin Controls Toggle -->
+    <button id="toggleAdminBtn">⚙️ Open Admin Setup</button>
+    
+    <!-- Hidden Admin Panel -->
+    <div id="adminPanel" style="display: none; width: 100%; max-width: 440px; margin-top: 20px;">
+      
+      <!-- Registration Card -->
+      <div id="adminRegistration" class="card">
+        <h4 class="text-center">Register New Employee</h4>
+        
+        <div class="input-group">
+          <input id="nameInput" placeholder="Full Name" />
+        </div>
+        
+        <div class="input-group">
+          <input id="pinInput" placeholder="Create 4-Digit PIN" maxlength="4" />
+        </div>
+        
+        <div class="input-group">
+          <input id="departmentInput" placeholder="Department (e.g. Sales)" />
+        </div>
+        
+        <div class="shift-grid">
+          <div>
+            <label>Shift Start</label>
+            <input id="shiftStartInput" type="time" value="08:00" />
+          </div>
+          <div>
+            <label>Shift End</label>
+            <input id="shiftEndInput" type="time" value="17:00" />
+          </div>
+        </div>
+
+        <button id="registerBtn" disabled style="margin-top: 10px;">Capture & Register Face</button>
+      </div>
+
+      <!-- Dashboard Card -->
+      <div id="adminDashboard" class="card">
+        <div class="dashboard-header">
+          <h2>Live Attendance</h2>
+          <button id="exportCsvBtn" style="background: var(--primary);">Export CSV</button>
+        </div>
+        
+        <button id="refreshLogsBtn" style="background: var(--success); width: 100%;">Refresh Logs</button>
+        
+        <div class="table-container">
+          <table>
             <thead>
-              <tr style="border-bottom: 2px solid #555;">
-                <th style="padding: 8px;">Name</th>
-                <th style="padding: 8px;">Dept</th>
-                <th style="padding: 8px;">Time</th>
-                <th style="padding: 8px;">Status</th>
+              <tr>
+                <th>Name</th>
+                <th>Dept</th>
+                <th>Time</th>
+                <th>Status</th>
               </tr>
             </thead>
-            <tbody id="logsTableBody"></tbody>
+            <tbody id="logsTableBody">
+              <tr><td colspan="4" class="text-center text-sm">No records loaded.</td></tr>
+            </tbody>
           </table>
         </div>
       </div>
+
     </div>
   </div>
 
   <footer>&copy; 2026 Sinachie. All Rights Reserved.</footer>
-  
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
   <script>
+    // Global UI Functions
     function togglePassword(inputId, icon) {
       const input = document.getElementById(inputId);
       if (input.type === "password") { input.type = "text"; icon.innerHTML = "🙈"; }
       else { input.type = "password"; icon.innerHTML = "👁️"; }
     }
-    let isSignupMode = false;
-    function toggleAuthMode() {
-      isSignupMode = !isSignupMode;
-      document.getElementById('companyCodeGroup').style.display = isSignupMode ? 'block' : 'none';
-      document.getElementById('loginBtn').style.display = isSignupMode ? 'none' : 'inline-block';
-      document.getElementById('signupBtn').style.display = isSignupMode ? 'inline-block' : 'none';
-      document.getElementById('authStatus').textContent = '';
-    }
   </script>
+  
+  <!-- Load App Logic -->
   <script src="app.js"></script>
 </body>
 </html>
