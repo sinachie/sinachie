@@ -28,10 +28,10 @@
 
   <!-- AUTH SECTION (Only shows if not logged in) -->
   <div id="authSection">
-  <h3>Secure Login</h3>
+  <h3>Secure Login / Register</h3>
   
   <div class="input-group">
-    <input id="authEmail" type="email" placeholder="Work Email" />
+    <input id="authEmail" type="email" placeholder="Work Email (e.g. name@gmail.com)" />
   </div>
   
   <div class="input-group">
@@ -39,19 +39,18 @@
     <span class="toggle-password" onclick="togglePassword('authPassword', this)">👁️</span>
   </div>
 
-  <!-- Only show this if they are joining an existing company -->
-  <div class="input-group" id="companyCodeGroup" style="display: none;">
-    <input id="companyCodeInput" type="text" placeholder="Optional: Enter Company Code to join team" />
+  <div class="input-group">
+    <input id="companyCodeInput" type="text" placeholder="Optional: Join Code (Leave blank to create new)" />
   </div>
 
   <div>
-    <button id="loginBtn">Login</button>
-    <button id="signupBtn" style="display: none;">Create Company Account</button>
+    <button id="loginBtn" style="display: none;">Login to Existing Account</button>
+    <button id="signupBtn">Create Account</button>
   </div>
-  <p id="authStatus" style="color: #ff9800; font-size: 14px;"></p>
+  <p id="authStatus" style="color: #ff9800; font-size: 14px; font-weight: bold; margin-top: 10px;"></p>
   
   <p style="font-size: 12px; color: #888; margin-top: 15px; cursor: pointer;" onclick="toggleAuthMode()">
-    <span id="toggleAuthText"><u>New Company? Create an account here.</u></span>
+    <u id="toggleText">Already have an account? Click here to Login.</u>
   </p>
 </div>
 
