@@ -51,44 +51,48 @@ _supabase.auth.onAuthStateChange(async (event, session) => {
     authSection.style.display = 'none';
     appContent.style.display = 'block';
     
-    // 1. Start Camera Immediately (Prevents loading hang)
     if (!isLiveLoopRunning) startCameraAndModels();
 
     try {
-      // 2. Fetch user role and company ID
-      const { data: userData } = await _supabase.from('users')
-        .select('company_id')
-        .eq('email', currentUser.email)
-        .limit(1);
+      // Add a timeout so it doesn't hang
+      const userPromise = _supabase.from('users').select('company_id').eq('email', currentUser.email).limit(1);
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("DB Timeout")), 3000));
+      
+      const { data: userData } = await Promise.race([userPromise, timeoutPromise]);
 
       if (userData && userData.length > 0) {
         currentCompanyId = userData[0].company_id;
         
-        // 3. Fetch company details to display at the top
-        const { data: compData } = await _supabase.from('companies')
-          .select('name, join_code')
-          .eq('id', currentCompanyId)
-          .single();
+        // Fetch company details
+        const { data: compData } = await _supabase.from('companies').select('name, join_code').eq('id', currentCompanyId).single();
           
         if (compData) {
           document.getElementById('displayCompanyName').innerText = compData.name;
           document.getElementById('displayJoinCode').innerText = compData.join_code || 'N/A';
         }
       } else {
-        // Edge case: Auth user exists but no company record. Force setup.
-        document.getElementById('authStatus').textContent = 'Please create a company to continue.';
-        toggleAuthMode(); 
-        await _supabase.auth.signOut(); 
-        return;
+        // IF THE USER IS NOT IN THE DATABASE, CREATE THEM ON THE FLY
+        console.log("User not found in public.users. Creating now...");
+        const newCompId = crypto.randomUUID();
+        const newCode = crypto.randomUUID().split('-')[0].toUpperCase();
+        
+        await _supabase.from('companies').insert({ id: newCompId, name: 'My New Company', join_code: newCode });
+        await _supabase.from('users').insert({ company_id: newCompId, email: currentUser.email, role: 'admin', pin: '0000', face_descriptor: [0.0] });
+        
+        currentCompanyId = newCompId;
+        document.getElementById('displayCompanyName').innerText = 'My New Company';
+        document.getElementById('displayJoinCode').innerText = newCode;
       }
     } catch (err) { 
       console.error("Setup error:", err); 
+      // EVEN IF IT FAILS, DON'T LOG THEM OUT. SHOW A MESSAGE.
+      document.getElementById('displayCompanyName').innerText = "Offline Mode";
+      document.getElementById('displayJoinCode').innerText = "N/A";
     }
 
     await loadUsersFromSupabase();
 
   } else {
-    // Logged out state
     currentUser = null;
     authSection.style.display = 'block';
     appContent.style.display = 'none';
