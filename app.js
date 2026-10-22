@@ -1,5 +1,5 @@
 // ==========================================
-// SINACHIE ENTERPRISE POS - CORE LOGIC (V3.5)
+// SINACHIE ENTERPRISE POS - CORE LOGIC (V3.5.1)
 // ==========================================
 
 const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
@@ -115,77 +115,41 @@ document.getElementById('loginBtn').onclick = async () => {
 };
 
 // ==========================================
-// BULLETPROOF SIGNUP WITH CUSTOM COMPANY NAME
+// SECURE SIGNUP VIA DATABASE TRIGGER
 // ==========================================
 document.getElementById('signupBtn').onclick = async () => {
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   const companyNameInput = document.getElementById('companyNameInput').value.trim();
-  const companyCode = document.getElementById('companyCodeInput').value.trim();
   
-  if (!email || !password) {
+  if (!email || !password || !companyNameInput) {
     authStatus.style.color = 'red';
-    authStatus.textContent = 'Please fill in email and password.';
+    authStatus.textContent = 'Please fill in email, password, and company name.';
     return;
   }
 
   authStatus.style.color = '#ff9800';
   authStatus.textContent = 'Creating account... Please wait.';
 
-  let compId = null;
-  let finalCompName = "";
-  let joinCode = "";
-
   try {
-    // 1. If they provided an existing join code, link to that company
-    if (companyCode) {
-      const { data } = await _supabase.from('companies').select('id, name').eq('join_code', companyCode.toUpperCase()).single();
-      if (data) { 
-        compId = data.id; 
-        finalCompName = data.name; 
-      } else {
-        throw new Error("Invalid Company Code.");
+    // We pass the company name into the metadata. 
+    // The SQL Trigger we created handles the rest automatically!
+    const { data: authData, error: authError } = await _supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        data: {
+          company_name: companyNameInput 
+        }
       }
-    } 
-    // 2. If they provided a NEW company name, create a new company
-    else if (companyNameInput) {
-      compId = crypto.randomUUID();
-      // Generate a random 8-character Join Code (e.g., A1B2C3D4)
-      joinCode = crypto.randomUUID().split('-')[0].toUpperCase(); 
-      finalCompName = companyNameInput;
-      
-      const { error: compError } = await _supabase.from('companies').insert({ 
-        id: compId, 
-        name: finalCompName, 
-        join_code: joinCode 
-      });
-      if (compError) throw new Error("Failed to create company: " + compError.message);
-    } 
-    // 3. If neither is provided, tell them to enter a name
-    else {
-      throw new Error("Please enter a Company Name to create an account.");
-    }
-
-    // 4. Create the Auth User
-    const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password });
+    });
+    
     if (authError) throw new Error(authError.message);
 
-    // 5. Add them to the users table as the Admin
-    if (authData.user) {
-      const { error: userError } = await _supabase.from('users').insert({ 
-        company_id: compId, 
-        name: email.split('@')[0], 
-        email: email, 
-        role: 'admin', 
-        pin: '0000', 
-        face_descriptor: [0.0] 
-      });
+    authStatus.style.color = '#4caf50';
+    authStatus.textContent = 'Account created! Logging you in...';
+    // The onAuthStateChange listener will automatically catch the session and load the app.
 
-      if (userError) throw new Error("Failed to create user profile: " + userError.message);
-      
-      authStatus.style.color = '#4caf50';
-      authStatus.textContent = 'Account created! Logging you in...';
-    }
   } catch (err) {
     authStatus.style.color = 'red';
     authStatus.textContent = `Error: ${err.message}`;
