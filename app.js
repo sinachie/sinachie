@@ -99,26 +99,84 @@ document.getElementById('loginBtn').onclick = async () => {
 // SIGNUP: AUTOMATIC COMPANY CREATION
 // ==========================================
 document.getElementById('signupBtn').onclick = async () => {
-  const email = document.getElementById('authEmail').value;
+  const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   const companyCode = document.getElementById('companyCodeInput').value.trim();
+  const statusEl = document.getElementById('authStatus');
   
-  if (!email || !password) return document.getElementById('authStatus').textContent = 'Enter email and password.';
+  // 1. Show immediate feedback so you know the button works
+  statusEl.style.color = '#ff9800';
+  statusEl.textContent = 'Processing... Please wait.';
+
+  if (!email || !password) {
+    statusEl.textContent = 'Please enter both email and password.';
+    return;
+  }
+
+  if (!email.includes('@')) {
+    statusEl.textContent = 'Please enter a valid email address (e.g. name@gmail.com).';
+    return;
+  }
 
   let compId = null;
   let compName = "";
   let joinCode = "";
 
-  // If they entered a code, try to join an existing team
-  if (companyCode) {
-    const { data } = await _supabase.from('companies').select('id, name').eq('join_code', companyCode.toUpperCase()).single();
-    if (data) {
-      compId = data.id;
-      compName = data.name;
-    } else {
-      return document.getElementById('authStatus').textContent = 'Invalid Company Code.';
+  try {
+    // 2. Check if they are joining an existing team
+    if (companyCode) {
+      const { data } = await _supabase.from('companies').select('id, name').eq('join_code', companyCode.toUpperCase()).single();
+      if (data) {
+        compId = data.id;
+        compName = data.name;
+      } else {
+        statusEl.textContent = 'Invalid Company Code. Please check and try again.';
+        return;
+      }
     }
+
+    // 3. Create the Auth User
+    statusEl.textContent = 'Creating account...';
+    const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password });
+    
+    if (authError) {
+      statusEl.textContent = `Auth Error: ${authError.message}`;
+      return;
+    }
+
+    if (authData.user) {
+      // 4. Create a new company if no code was provided
+      if (!compId) {
+        compId = crypto.randomUUID();
+        joinCode = crypto.randomUUID().split('-')[0].toUpperCase(); 
+        compName = email.split('@')[0] + "'s Company"; 
+        
+        const { error: compError } = await _supabase.from('companies').insert({ id: compId, name: compName, join_code: joinCode });
+        if (compError) throw new Error("Company creation failed: " + compError.message);
+      }
+      
+      // 5. Add them to the users table
+      statusEl.textContent = 'Setting up workspace...';
+      const { error: userError } = await _supabase.from('users').insert({ 
+        company_id: compId, 
+        name: email.split('@')[0], 
+        email: email, 
+        role: 'admin', 
+        pin: '0000', 
+        face_descriptor: [0.0] 
+      });
+
+      if (userError) throw new Error("User setup failed: " + userError.message);
+      
+      statusEl.style.color = '#4caf50';
+      statusEl.textContent = 'Account created! Logging you in...';
+      // The onAuthStateChange listener will automatically log them in
+    }
+  } catch (err) {
+    statusEl.style.color = 'red';
+    statusEl.textContent = `Error: ${err.message}`;
   }
+};
 
   // Create Supabase Auth User
   const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password });
